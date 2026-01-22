@@ -7,27 +7,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
-        
         #ui { 
             position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 100; display: flex; gap: 15px; align-items: center;
             background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
             padding: 12px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
         }
-
         .btn {
             width: 45px; height: 45px; border-radius: 50%; border: none;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; background: rgba(255,255,255,0.1); color: #fff; transition: 0.2s;
         }
-
         .btn svg { width: 24px; height: 24px; fill: currentColor; }
         .btn:active { transform: scale(0.8); }
         .active-mode { background: #9d4edd !important; box-shadow: 0 0 15px #9d4edd; }
-        
         .input-group { display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.5); font-size: 9px; font-weight: bold; }
         input { width: 35px; background: none; border: none; color: white; text-align: center; font-size: 16px; font-weight: bold; outline: none; }
-        
         canvas { display: block; }
     </style>
 </head>
@@ -92,10 +87,10 @@ createWalls();
 const TARGET_SIZE = 80;
 let isSpaceMode = false, gyroStarted = false, sparksEnabled = true;
 
+// Функция с проверкой ошибок загрузки
 function getCircularTexture(imgPath, size, callback) {
     const img = new Image();
     img.src = imgPath;
-    img.crossOrigin = "Anonymous";
     img.onload = () => {
         const canvas = document.createElement('canvas');
         canvas.width = size; canvas.height = size;
@@ -104,11 +99,12 @@ function getCircularTexture(imgPath, size, callback) {
         ctx.drawImage(img, 0, 0, size, size);
         callback(canvas.toDataURL());
     };
-    img.onerror = () => { // Если картинки нет, рисуем просто круг
+    img.onerror = () => {
+        // Если картинка не найдена - создаем градиентный круг, чтобы не было черного экрана
         const canvas = document.createElement('canvas');
         canvas.width = size; canvas.height = size;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#9d4edd';
+        ctx.fillStyle = '#ff4d4d'; // Красный круг, если картинки нет
         ctx.beginPath(); ctx.arc(size/2, size/2, size/2, 0, Math.PI*2); ctx.fill();
         callback(canvas.toDataURL());
     };
@@ -139,13 +135,12 @@ function toggleSpace() {
     document.getElementById('spaceBtn').classList.toggle('active-mode');
     
     if(isSpaceMode) {
-        world.gravity.scale = 0;
-        // Даем импульс всем телам
+        world.gravity.scale = 0; // Космос (антигравитация)
         Composite.allBodies(world).forEach(b => {
             if(!b.isStatic) Body.setVelocity(b, { x: (Math.random()-0.5)*5, y: (Math.random()-0.5)*5 });
         });
     } else {
-        world.gravity.scale = 0.001;
+        world.gravity.scale = 0.001; // Обычная гравитация
     }
 }
 
@@ -173,7 +168,6 @@ Events.on(engine, 'afterUpdate', () => {
     
     bodies.forEach(b => {
         if (!b.isStatic) {
-            // Применяем скорость только если она не равна 1
             if (speedScale !== 1) {
                 Body.setVelocity(b, { x: b.velocity.x * speedScale, y: b.velocity.y * speedScale });
             }
