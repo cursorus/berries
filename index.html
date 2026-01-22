@@ -9,13 +9,25 @@
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         
         /* Логотип по центру */
-        #logo {
-            position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            height: 120px; width: auto;
-            pointer-events: none; z-index: 5;
-            opacity: 0.8;
-        }
+      /* Логотип по центру */
+#logo {
+    position: fixed; 
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    /* Фиксируем высоту, ширина подстроится сама */
+    height: 150px; 
+    width: auto; 
+    
+    /* Сохранение пропорций */
+    object-fit: contain; 
+    
+    pointer-events: none; 
+    z-index: 5;
+    opacity: 0.8;
+}
+
 
         #ui { 
             position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
