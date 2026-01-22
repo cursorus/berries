@@ -2,51 +2,49 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>wb ягодки</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         
-      #logo {
-    position: fixed; 
-    top: 50%; 
-    left: 50%;
-    transform: translate(-50%, -50%);
-    
-    /* --- НАСТРОЙКИ РАЗМЕРА --- */
-    height: 30px;      /* Твоя фиксированная высота в пикселях */
-    width: auto;        /* Ширина подстроится автоматически, чтобы не было искажений */
-    /* ------------------------- */
-    
-    object-fit: contain; 
-    pointer-events: none; /* Чтобы клики проходили сквозь логотип к ягодам */
-    
-    z-index: -1;          /* Уводим на самый задний план (ягоды будут сверху) */
-    opacity: 1;           /* Полная яркость (убрали прозрачность) */
-}
-
+        #logo {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            height: 120px; width: auto; /* Высота 120px, ширина сама */
+            object-fit: contain; pointer-events: none;
+            z-index: -1; opacity: 1;
+        }
 
         #ui { 
             position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
-            z-index: 100; display: flex; gap: 15px; align-items: center;
+            z-index: 100; display: flex; gap: 10px; align-items: center;
             background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
-            padding: 12px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
+            max-width: 90vw; width: fit-content;
         }
+
+        .ui-item { display: flex; flex-direction: column; align-items: center; min-width: 45px; }
+        
         .btn {
-            width: 45px; height: 45px; border-radius: 50%; border: none;
+            width: 40px; height: 40px; border-radius: 50%; border: none;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; background: rgba(255,255,255,0.1); color: #fff; transition: 0.2s;
+            margin-bottom: 4px;
         }
-        .btn svg { width: 24px; height: 24px; fill: currentColor; }
+        .btn svg { width: 20px; height: 20px; fill: currentColor; }
         .btn:active { transform: scale(0.8); }
         .active-mode { background: #9d4edd !important; box-shadow: 0 0 15px #9d4edd; }
         
-        .stats-group { display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.7); min-width: 40px; }
-        .stats-val { font-size: 16px; font-weight: bold; color: #fff; }
-        .stats-label { font-size: 9px; font-weight: bold; opacity: 0.5; }
+        .label { font-size: 8px; font-weight: bold; color: rgba(255,255,255,0.5); text-transform: uppercase; text-align: center; }
+        .val { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 4px; height: 40px; display: flex; align-items: center; }
 
-        input { width: 35px; background: none; border: none; color: white; text-align: center; font-size: 16px; font-weight: bold; outline: none; }
+        input { width: 30px; background: none; border: none; color: white; text-align: center; font-size: 16px; font-weight: bold; outline: none; }
         canvas { display: block; }
     </style>
 </head>
@@ -55,26 +53,43 @@
 <img src="logo.png" id="logo">
 
 <div id="ui">
-    <div class="stats-group">
-        <span class="stats-val" id="fpsVal">60</span>
-        <span class="stats-label">FPS</span>
+    <div class="ui-item">
+        <div class="val" id="fpsVal">60</div>
+        <div class="label">FPS</div>
     </div>
-    <div class="stats-group">
-        <input type="number" id="countInput" value="5">
-        <span class="stats-label">ЯГОД</span>
+
+    <div class="ui-item">
+        <div class="val"><input type="number" id="countInput" value="5"></div>
+        <div class="label">ЯГОД</div>
     </div>
-    <button class="btn" onclick="spawnMultiple()">
-        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-    </button>
-    <button class="btn" onclick="clearAll()">
-        <svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
-    </button>
-    <button id="sparkBtn" class="btn active-mode" onclick="sparksEnabled = !sparksEnabled; this.classList.toggle('active-mode')">
-        <svg viewBox="0 0 24 24"><path d="M10,2L12,9L19,11L12,13L10,20L8,13L1,11L8,9L10,2Z"/></svg>
-    </button>
-    <button id="spaceBtn" class="btn" onclick="toggleSpace()">
-        <svg viewBox="0 0 24 24"><path d="M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5Z"/></svg>
-    </button>
+
+    <div class="ui-item">
+        <button class="btn" onclick="spawnMultiple()">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+        <div class="label">ПУСК</div>
+    </div>
+
+    <div class="ui-item">
+        <button class="btn" onclick="clearAll()">
+            <svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+        </button>
+        <div class="label">DEL</div>
+    </div>
+
+    <div class="ui-item">
+        <button id="sparkBtn" class="btn active-mode" onclick="sparksEnabled = !sparksEnabled; this.classList.toggle('active-mode')">
+            <svg viewBox="0 0 24 24"><path d="M10,2L12,9L19,11L12,13L10,20L8,13L1,11L8,9L10,2Z"/></svg>
+        </button>
+        <div class="label">FX</div>
+    </div>
+
+    <div class="ui-item">
+        <button id="spaceBtn" class="btn" onclick="toggleSpace()">
+            <svg viewBox="0 0 24 24"><path d="M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5Z"/></svg>
+        </button>
+        <div class="label">ZERO G</div>
+    </div>
 </div>
 
 <script>
@@ -102,27 +117,27 @@ Runner.run(runner, engine);
 let walls = [];
 function createWalls() {
     if (walls.length) Composite.remove(world, walls);
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     const opt = { isStatic: true, friction: 0.5, render: { visible: false } };
+    
+    // Стены шире экрана, чтобы не было дыр
     walls = [
-        Bodies.rectangle(w/2, h+50, w, 100, opt),
-        Bodies.rectangle(w/2, -50, w, 100, opt),
-        Bodies.rectangle(-50, h/2, 100, h, opt),
-        Bodies.rectangle(w+50, h/2, 100, h, opt)
+        Bodies.rectangle(w/2, h+50, w*2, 100, opt),
+        Bodies.rectangle(w/2, -50, w*2, 100, opt),
+        Bodies.rectangle(-50, h/2, 100, h*2, opt),
+        Bodies.rectangle(w+50, h/2, 100, h*2, opt)
     ];
     Composite.add(world, walls);
 }
 createWalls();
 
-const TARGET_SIZE = 80;
+const BASE_SIZE = 80;
 let isSpaceMode = false, gyroStarted = false, sparksEnabled = true;
-
-// Кэш текстур для предотвращения бага с размерами
 const textureCache = {};
 
 function getCircularTexture(berryNum, callback) {
     if (textureCache[berryNum]) return callback(textureCache[berryNum]);
-
     const img = new Image();
     img.src = `berry${berryNum}.png`;
     img.onload = () => {
@@ -134,28 +149,28 @@ function getCircularTexture(berryNum, callback) {
         textureCache[berryNum] = canvas.toDataURL();
         callback(textureCache[berryNum]);
     };
-    img.onerror = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128; canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ff4d4d';
-        ctx.beginPath(); ctx.arc(64, 64, 64, 0, Math.PI*2); ctx.fill();
-        callback(canvas.toDataURL());
-    };
+    img.onerror = () => { /* fallback */ callback(null); };
 }
 
 function createBerry(x, y) {
     const berryNum = Math.floor(Math.random() * 4) + 1;
+    // Корректировка размера под масштаб экрана
+    const currentSize = BASE_SIZE * (window.innerWidth / 400 > 1 ? 1 : window.innerWidth / 400);
+    
     getCircularTexture(berryNum, (circularImg) => {
-        const berry = Bodies.circle(x, y, TARGET_SIZE/2, {
+        const berry = Bodies.circle(x, y, currentSize/2, {
             restitution: 0.7, 
             friction: 0.2, 
-            frictionAir: isSpaceMode ? 0.05 : 0.01,
-            render: { sprite: { texture: circularImg, xScale: TARGET_SIZE/256, yScale: TARGET_SIZE/256 } }
+            frictionAir: isSpaceMode ? 0.08 : 0.01,
+            render: { 
+                sprite: { 
+                    texture: circularImg, 
+                    xScale: currentSize/256, 
+                    yScale: currentSize/256 
+                } 
+            }
         });
-        if(isSpaceMode) {
-            Body.setVelocity(berry, { x: (Math.random()-0.5)*5, y: (Math.random()-0.5)*5 });
-        }
+        if(isSpaceMode) Body.setVelocity(berry, { x: (Math.random()-0.5)*3, y: (Math.random()-0.5)*3 });
         Composite.add(world, berry);
     });
 }
@@ -172,37 +187,33 @@ function clearAll() {
 function toggleSpace() {
     isSpaceMode = !isSpaceMode;
     document.getElementById('spaceBtn').classList.toggle('active-mode');
-    
-    if(isSpaceMode) {
-        world.gravity.y = 0;
-        Composite.allBodies(world).forEach(b => {
-            if(!b.isStatic) {
-                b.frictionAir = 0.05; // Вязкость в космосе
-                Body.setVelocity(b, { x: (Math.random()-0.5)*4, y: (Math.random()-0.5)*4 });
-            }
-        });
-    } else {
-        world.gravity.y = 1;
-        Composite.allBodies(world).forEach(b => { if(!b.isStatic) b.frictionAir = 0.01; });
-    }
+    world.gravity.y = isSpaceMode ? 0 : 1;
+    Composite.allBodies(world).forEach(b => {
+        if(!b.isStatic) {
+            b.frictionAir = isSpaceMode ? 0.08 : 0.01;
+            if(isSpaceMode) Body.setVelocity(b, { x: (Math.random()-0.5)*2, y: (Math.random()-0.5)*2 });
+        }
+    });
 }
 
+// Управление мышью/тачем
 const mouseConstraint = MouseConstraint.create(engine, {
-    mouse: Mouse.create(render.canvas), constraint: { stiffness: 0.1, render: { visible: false } }
+    mouse: Mouse.create(render.canvas), 
+    constraint: { stiffness: 0.1, render: { visible: false } }
 });
 Composite.add(world, mouseConstraint);
 
 let lastTime = performance.now(), frames = 0;
 const fpsEl = document.getElementById('fpsVal');
-
 let particles = [];
+
 Events.on(engine, 'collisionStart', (event) => {
     if (!sparksEnabled) return;
     event.pairs.forEach(pair => {
         const pos = pair.collision.supports[0];
         if (pos) {
             for(let i=0; i<2; i++) {
-                particles.push({ x: pos.x, y: pos.y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 1 });
+                particles.push({ x: pos.x, y: pos.y, vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3, life: 1 });
             }
         }
     });
@@ -215,12 +226,11 @@ Events.on(engine, 'afterUpdate', () => {
         fpsEl.innerText = frames;
         frames = 0; lastTime = now;
     }
-
     const ctx = render.context;
     particles = particles.filter(p => {
         p.x += p.vx; p.y += p.vy; p.life -= 0.03;
         ctx.fillStyle = `rgba(157, 78, 221, ${p.life})`;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
         return p.life > 0;
     });
 });
@@ -240,9 +250,8 @@ function initGyro() {
 function handleGyro(e) {
     const s = 0.06;
     if (isSpaceMode) {
-        // Очень мягкое управление в космосе
-        const fx = e.gamma * 0.0001;
-        const fy = e.beta * 0.0001;
+        const fx = e.gamma * 0.00005;
+        const fy = e.beta * 0.00005;
         Composite.allBodies(world).forEach(b => {
             if(!b.isStatic) Body.applyForce(b, b.position, { x: fx, y: fy });
         });
@@ -255,6 +264,8 @@ function handleGyro(e) {
 window.addEventListener('resize', () => {
     render.canvas.width = window.innerWidth;
     render.canvas.height = window.innerHeight;
+    render.options.width = window.innerWidth;
+    render.options.height = window.innerHeight;
     createWalls();
 });
 
