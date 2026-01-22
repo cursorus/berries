@@ -3,31 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Berry Ultimate Fixed</title>
+    <title>Berry Ultimate Fixed Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         
-        /* Логотип по центру */
-      /* Логотип по центру */
-#logo {
-    position: fixed; 
-    top: 50%; 
-    left: 50%;
-    transform: translate(-50%, -50%);
-    
-    /* Фиксируем высоту, ширина подстроится сама */
-    height: 150px; 
-    width: auto; 
-    
-    /* Сохранение пропорций */
-    object-fit: contain; 
-    
-    pointer-events: none; 
-    z-index: 5;
-    opacity: 0.8;
-}
-
+        #logo {
+            position: fixed; 
+            top: 50%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* Фиксируем высоту, ширина подстроится сама */
+            height: 20vh; 
+            max-height: 120px;
+            width: auto; 
+            object-fit: contain; 
+            pointer-events: none; 
+            z-index: 5;
+            opacity: 0.6;
+        }
 
         #ui { 
             position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
@@ -49,36 +43,31 @@
         .stats-label { font-size: 9px; font-weight: bold; opacity: 0.5; }
 
         input { width: 35px; background: none; border: none; color: white; text-align: center; font-size: 16px; font-weight: bold; outline: none; }
-        canvas { display: block; image-rendering: auto; }
+        canvas { display: block; }
     </style>
 </head>
 <body onclick="initGyro()">
 
-<img src="logo.png" id="logo" alt="">
+<img src="logo.png" id="logo">
 
 <div id="ui">
     <div class="stats-group">
         <span class="stats-val" id="fpsVal">60</span>
         <span class="stats-label">FPS</span>
     </div>
-
     <div class="stats-group">
         <input type="number" id="countInput" value="5">
         <span class="stats-label">ЯГОД</span>
     </div>
-
     <button class="btn" onclick="spawnMultiple()">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
     </button>
-
     <button class="btn" onclick="clearAll()">
         <svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
     </button>
-
     <button id="sparkBtn" class="btn active-mode" onclick="sparksEnabled = !sparksEnabled; this.classList.toggle('active-mode')">
         <svg viewBox="0 0 24 24"><path d="M10,2L12,9L19,11L12,13L10,20L8,13L1,11L8,9L10,2Z"/></svg>
     </button>
-
     <button id="spaceBtn" class="btn" onclick="toggleSpace()">
         <svg viewBox="0 0 24 24"><path d="M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5Z"/></svg>
     </button>
@@ -89,7 +78,6 @@ const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Event
 
 const engine = Engine.create();
 const world = engine.world;
-// Улучшаем качество рендера
 const render = Render.create({
     element: document.body,
     engine: engine,
@@ -98,8 +86,8 @@ const render = Render.create({
         height: window.innerHeight, 
         wireframes: false, 
         background: 'transparent',
-        pixelRatio: 'auto', // Убирает пиксельность на мобильных
-        antialias: true     // Сглаживание
+        pixelRatio: window.devicePixelRatio,
+        antialias: true 
     }
 });
 
@@ -113,10 +101,10 @@ function createWalls() {
     const w = window.innerWidth, h = window.innerHeight;
     const opt = { isStatic: true, friction: 0.5, render: { visible: false } };
     walls = [
-        Bodies.rectangle(w/2, h+25, w, 50, opt),
-        Bodies.rectangle(w/2, -25, w, 50, opt),
-        Bodies.rectangle(-25, h/2, 50, h, opt),
-        Bodies.rectangle(w+25, h/2, 50, h, opt)
+        Bodies.rectangle(w/2, h+50, w, 100, opt),
+        Bodies.rectangle(w/2, -50, w, 100, opt),
+        Bodies.rectangle(-50, h/2, 100, h, opt),
+        Bodies.rectangle(w+50, h/2, 100, h, opt)
     ];
     Composite.add(world, walls);
 }
@@ -125,38 +113,44 @@ createWalls();
 const TARGET_SIZE = 80;
 let isSpaceMode = false, gyroStarted = false, sparksEnabled = true;
 
-function getCircularTexture(imgPath, size, callback) {
+// Кэш текстур для предотвращения бага с размерами
+const textureCache = {};
+
+function getCircularTexture(berryNum, callback) {
+    if (textureCache[berryNum]) return callback(textureCache[berryNum]);
+
     const img = new Image();
-    img.src = imgPath;
+    img.src = `berry${berryNum}.png`;
     img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 512; canvas.height = 512; // Большее разрешение для четкости
+        canvas.width = 256; canvas.height = 256;
         const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.beginPath(); ctx.arc(256, 256, 256, 0, Math.PI*2); ctx.clip();
-        ctx.drawImage(img, 0, 0, 512, 512);
-        callback(canvas.toDataURL());
+        ctx.beginPath(); ctx.arc(128, 128, 128, 0, Math.PI*2); ctx.clip();
+        ctx.drawImage(img, 0, 0, 256, 256);
+        textureCache[berryNum] = canvas.toDataURL();
+        callback(textureCache[berryNum]);
     };
     img.onerror = () => {
         const canvas = document.createElement('canvas');
         canvas.width = 128; canvas.height = 128;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#9d4edd';
+        ctx.fillStyle = '#ff4d4d';
         ctx.beginPath(); ctx.arc(64, 64, 64, 0, Math.PI*2); ctx.fill();
         callback(canvas.toDataURL());
     };
 }
 
 function createBerry(x, y) {
-    const berryNum = Math.floor(Math.random() * 4) + 1; // Теперь 4 вида
-    getCircularTexture(`berry${berryNum}.png`, 512, (circularImg) => {
+    const berryNum = Math.floor(Math.random() * 4) + 1;
+    getCircularTexture(berryNum, (circularImg) => {
         const berry = Bodies.circle(x, y, TARGET_SIZE/2, {
-            restitution: 0.6, friction: 0.2, frictionAir: isSpaceMode ? 0.01 : 0.02,
-            render: { sprite: { texture: circularImg, xScale: TARGET_SIZE/512, yScale: TARGET_SIZE/512 } }
+            restitution: 0.7, 
+            friction: 0.2, 
+            frictionAir: isSpaceMode ? 0.05 : 0.01,
+            render: { sprite: { texture: circularImg, xScale: TARGET_SIZE/256, yScale: TARGET_SIZE/256 } }
         });
         if(isSpaceMode) {
-            Body.setVelocity(berry, { x: (Math.random()-0.5)*10, y: (Math.random()-0.5)*10 });
+            Body.setVelocity(berry, { x: (Math.random()-0.5)*5, y: (Math.random()-0.5)*5 });
         }
         Composite.add(world, berry);
     });
@@ -168,8 +162,7 @@ function spawnMultiple() {
 }
 
 function clearAll() { 
-    const bodies = Composite.allBodies(world);
-    bodies.forEach(b => { if(!b.isStatic) Composite.remove(world, b); }); 
+    Composite.allBodies(world).forEach(b => { if(!b.isStatic) Composite.remove(world, b); }); 
 }
 
 function toggleSpace() {
@@ -178,27 +171,24 @@ function toggleSpace() {
     
     if(isSpaceMode) {
         world.gravity.y = 0;
-        world.gravity.x = 0;
         Composite.allBodies(world).forEach(b => {
             if(!b.isStatic) {
-                b.frictionAir = 0.01;
-                Body.setVelocity(b, { x: (Math.random()-0.5)*8, y: (Math.random()-0.5)*8 });
+                b.frictionAir = 0.05; // Вязкость в космосе
+                Body.setVelocity(b, { x: (Math.random()-0.5)*4, y: (Math.random()-0.5)*4 });
             }
         });
     } else {
         world.gravity.y = 1;
-        Composite.allBodies(world).forEach(b => { if(!b.isStatic) b.frictionAir = 0.02; });
+        Composite.allBodies(world).forEach(b => { if(!b.isStatic) b.frictionAir = 0.01; });
     }
 }
 
 const mouseConstraint = MouseConstraint.create(engine, {
-    mouse: Mouse.create(render.canvas), constraint: { stiffness: 0.2, render: { visible: false } }
+    mouse: Mouse.create(render.canvas), constraint: { stiffness: 0.1, render: { visible: false } }
 });
 Composite.add(world, mouseConstraint);
 
-// FPS Meter
-let lastTime = performance.now();
-let frames = 0;
+let lastTime = performance.now(), frames = 0;
 const fpsEl = document.getElementById('fpsVal');
 
 let particles = [];
@@ -208,14 +198,13 @@ Events.on(engine, 'collisionStart', (event) => {
         const pos = pair.collision.supports[0];
         if (pos) {
             for(let i=0; i<2; i++) {
-                particles.push({ x: pos.x, y: pos.y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 1 });
+                particles.push({ x: pos.x, y: pos.y, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 1 });
             }
         }
     });
 });
 
 Events.on(engine, 'afterUpdate', () => {
-    // FPS Calculation
     frames++;
     const now = performance.now();
     if (now >= lastTime + 1000) {
@@ -224,11 +213,10 @@ Events.on(engine, 'afterUpdate', () => {
     }
 
     const ctx = render.context;
-    // Отрисовка частиц
     particles = particles.filter(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.04;
+        p.x += p.vx; p.y += p.vy; p.life -= 0.03;
         ctx.fillStyle = `rgba(157, 78, 221, ${p.life})`;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill();
         return p.life > 0;
     });
 });
@@ -246,15 +234,17 @@ function initGyro() {
 }
 
 function handleGyro(e) {
+    const s = 0.06;
     if (isSpaceMode) {
-        const fx = e.gamma * 0.0002;
-        const fy = e.beta * 0.0002;
+        // Очень мягкое управление в космосе
+        const fx = e.gamma * 0.0001;
+        const fy = e.beta * 0.0001;
         Composite.allBodies(world).forEach(b => {
             if(!b.isStatic) Body.applyForce(b, b.position, { x: fx, y: fy });
         });
     } else {
-        world.gravity.x = e.gamma * 0.05;
-        world.gravity.y = e.beta * 0.05;
+        world.gravity.x = e.gamma * s;
+        world.gravity.y = e.beta * s;
     }
 }
 
