@@ -3,27 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Berry World Fix</title>
+    <title>Berry Physics Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a1a2e; font-family: sans-serif; }
-        #ui { position: fixed; top: 10px; left: 10px; z-index: 100; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; color: white; }
-        input { width: 40px; }
-        button { cursor: pointer; margin: 2px; border-radius: 4px; border: none; padding: 5px 10px; background: #4ecca3; }
-        canvas { display: block; touch-action: none; }
+        body { margin: 0; overflow: hidden; background: #0f0f1a; font-family: sans-serif; touch-action: none; }
+        #ui { position: fixed; top: 10px; left: 10px; z-index: 100; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 12px; color: white; display: flex; flex-direction: column; gap: 8px; border: 1px solid #4ecca3; }
+        .row { display: flex; gap: 5px; align-items: center; }
+        input { width: 45px; background: #232946; border: 1px solid #4ecca3; color: white; padding: 4px; border-radius: 4px; }
+        button { cursor: pointer; border-radius: 6px; border: none; padding: 8px 12px; background: #4ecca3; color: #1a1a2e; font-weight: bold; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
+        #gyroBtn { background: #ff9f43; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    <input type="number" id="countInput" value="5">
-    <button onclick="spawnMultiple()">Добавить</button>
-    <button onclick="clearAll()">Очистить</button>
+    <div class="row">
+        <input type="number" id="countInput" value="5">
+        <button onclick="spawnMultiple()">Добавить</button>
+        <button onclick="clearAll()">Clear</button>
+    </div>
     <button id="gravBtn" onclick="toggleGravity()">Гравитация: ВКЛ</button>
+    <button id="gyroBtn" onclick="requestGyro()">Включить наклон (Гироскоп)</button>
 </div>
 
 <script>
-const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint } = Matter;
+const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint, Events, Body } = Matter;
 
 const engine = Engine.create();
 const world = engine.world;
@@ -41,45 +47,37 @@ const render = Render.create({
 Render.run(render);
 Runner.run(Runner.create(), engine);
 
-// Стенки теперь строго по краям видимой области
+// Стенки
 let walls = [];
 function createWalls() {
     if (walls.length) Composite.remove(world, walls);
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = window.innerWidth, h = window.innerHeight;
+    const options = { isStatic: true, friction: 0.5, render: { visible: false } };
     walls = [
-        Bodies.rectangle(w/2, h + 25, w, 50, { isStatic: true }), // пол
-        Bodies.rectangle(w/2, -25, w, 50, { isStatic: true }),    // потолок
-        Bodies.rectangle(-25, h/2, 50, h, { isStatic: true }),    // лево
-        Bodies.rectangle(w + 25, h/2, 50, h, { isStatic: true })  // право
+        Bodies.rectangle(w/2, h + 25, w, 50, options),
+        Bodies.rectangle(w/2, -25, w, 50, options),
+        Bodies.rectangle(-25, h/2, 50, h, options),
+        Bodies.rectangle(w + 25, h/2, 50, h, options)
     ];
     Composite.add(world, walls);
 }
 createWalls();
 
-const TARGET_SIZE = 80; // Размер ягодки на экране (в пикселях)
+const TARGET_SIZE = 85; 
 
 function createBerry(x, y) {
-    // Случайно выбираем число от 1 до 5 (измени, если у тебя больше файлов)
     const berryNum = Math.floor(Math.random() * 5) + 1; 
     const imgPath = `berry${berryNum}.png`;
-
     const img = new Image();
     img.src = imgPath;
     
     img.onload = function() {
-        // Вычисляем масштаб: нужный размер / реальный размер картинки
         const scale = TARGET_SIZE / img.width;
-
         const berry = Bodies.circle(x, y, TARGET_SIZE / 2, {
-            restitution: 0.5,
-            render: {
-                sprite: {
-                    texture: imgPath,
-                    xScale: scale,
-                    yScale: scale
-                }
-            }
+            restitution: 0.6,
+            friction: 0.2,
+            frictionAir: 0.01,
+            render: { sprite: { texture: imgPath, xScale: scale, yScale: scale } }
         });
         Composite.add(world, berry);
     };
@@ -88,15 +86,12 @@ function createBerry(x, y) {
 function spawnMultiple() {
     const count = parseInt(document.getElementById('countInput').value);
     for(let i = 0; i < count; i++) {
-        // Спавним чуть ниже потолка, чтобы не застревали
-        createBerry(Math.random() * (window.innerWidth - 100) + 50, 50 + (i * 20));
+        createBerry(Math.random() * (window.innerWidth - 60) + 30, 50 + (i * 10));
     }
 }
 
 function clearAll() {
-    Composite.allBodies(world).forEach(body => {
-        if (!body.isStatic) Composite.remove(world, body);
-    });
+    Composite.allBodies(world).forEach(body => { if (!body.isStatic) Composite.remove(world, body); });
 }
 
 let isGravity = true;
@@ -106,30 +101,55 @@ function toggleGravity() {
     document.getElementById('gravBtn').innerText = isGravity ? "Гравитация: ВКЛ" : "Космос";
 }
 
-// Управление мышью и тачем
+// Управление мышью / пальцем
 const mouse = Mouse.create(render.canvas);
 const mouseConstraint = MouseConstraint.create(engine, {
     mouse: mouse,
-    constraint: { stiffness: 0.2, render: { visible: false } }
+    constraint: { stiffness: 0.1, render: { visible: false } }
 });
 Composite.add(world, mouseConstraint);
 
-// Наклон телефона
-window.addEventListener('deviceorientation', (e) => {
-    if (isGravity && e.beta !== null) {
-        world.gravity.x = e.gamma / 20;
-        world.gravity.y = e.beta / 20;
+// ЭФФЕКТ КРУЧЕНИЯ ПРИ ТАСКАНИИ
+Events.on(engine, 'afterUpdate', function() {
+    if (mouseConstraint.draggedBody) {
+        const body = mouseConstraint.draggedBody;
+        // Принудительно закручиваем тело, пока оно в руках
+        // Скорость кручения зависит от движения мыши
+        Body.setAngularVelocity(body, body.angularVelocity + (Math.random() - 0.5) * 0.15);
     }
 });
 
-// Подстройка при повороте экрана
+// ГИРОСКОП (Запрос прав)
+function requestGyro() {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response == 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    document.getElementById('gyroBtn').style.display = 'none';
+                }
+            })
+            .catch(console.error);
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+        document.getElementById('gyroBtn').style.display = 'none';
+    }
+}
+
+function handleOrientation(e) {
+    if (!isGravity) return;
+    // Коэффициент чувствительности
+    const sensitivity = 0.05;
+    world.gravity.x = e.gamma * sensitivity;
+    world.gravity.y = e.beta * sensitivity;
+}
+
 window.addEventListener('resize', () => {
     render.canvas.width = window.innerWidth;
     render.canvas.height = window.innerHeight;
     createWalls();
 });
 
-// Первый запуск
 spawnMultiple();
 </script>
 </body>
