@@ -8,20 +8,24 @@
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         
-        #logo {
-            position: fixed; 
-            top: 50%; 
-            left: 50%;
-            transform: translate(-50%, -50%);
-            /* Фиксируем высоту, ширина подстроится сама */
-            height: 20vh; 
-            max-height: 120px;
-            width: auto; 
-            object-fit: contain; 
-            pointer-events: none; 
-            z-index: 5;
-            opacity: 0.6;
-        }
+      #logo {
+    position: fixed; 
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    /* --- НАСТРОЙКИ РАЗМЕРА --- */
+    height: 30px;      /* Твоя фиксированная высота в пикселях */
+    width: auto;        /* Ширина подстроится автоматически, чтобы не было искажений */
+    /* ------------------------- */
+    
+    object-fit: contain; 
+    pointer-events: none; /* Чтобы клики проходили сквозь логотип к ягодам */
+    
+    z-index: -1;          /* Уводим на самый задний план (ягоды будут сверху) */
+    opacity: 1;           /* Полная яркость (убрали прозрачность) */
+}
+
 
         #ui { 
             position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
