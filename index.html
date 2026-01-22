@@ -16,7 +16,7 @@
         #logo {
             position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            height: 30px; width: auto; /* Высота 120px, ширина сама */
+            height: 30px; width: auto;
             object-fit: contain; pointer-events: none;
             z-index: -1; opacity: 1;
         }
@@ -34,17 +34,17 @@
         .btn {
             width: 40px; height: 40px; border-radius: 50%; border: none;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; background: rgba(255,255,255,1); color: #fff; transition: 0.2s;
+            cursor: pointer; background: rgba(255,255,255,1); color: #000; transition: 0.2s;
             margin-bottom: 4px;
         }
         .btn svg { width: 20px; height: 20px; fill: currentColor; }
         .btn:active { transform: scale(0.8); }
-        .active-mode { background: #9d4edd !important; box-shadow: 0 0 15px #9d4edd; }
+        .active-mode { background: #9d4edd !important; color: #fff !important; box-shadow: 0 0 15px #9d4edd; }
         
         .label { font-size: 8px; font-weight: bold; color: rgba(255,255,255,0.5); text-transform: uppercase; text-align: center; }
         .val { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 4px; height: 40px; display: flex; align-items: center; }
 
-        input { width: 30px; background: none; border: none; color: white; text-align: center; font-size: 14px; font-weight: bold; outline: none; }
+        input { width: 35px; background: none; border: none; color: white; text-align: center; font-size: 14px; font-weight: bold; outline: none; }
         canvas { display: block; }
     </style>
 </head>
@@ -119,20 +119,21 @@ function createWalls() {
     if (walls.length) Composite.remove(world, walls);
     const w = window.innerWidth;
     const h = window.innerHeight;
+    const thickness = 100;
     const opt = { isStatic: true, friction: 0.5, render: { visible: false } };
     
-    // Стены шире экрана, чтобы не было дыр
     walls = [
-        Bodies.rectangle(w/2, h+50, w*2, 100, opt),
-        Bodies.rectangle(w/2, -50, w*2, 100, opt),
-        Bodies.rectangle(-50, h/2, 100, h*2, opt),
-        Bodies.rectangle(w+50, h/2, 100, h*2, opt)
+        Bodies.rectangle(w/2, h + thickness/2, w * 2, thickness, opt), // пол
+        Bodies.rectangle(w/2, -thickness/2, w * 2, thickness, opt),    // потолок
+        Bodies.rectangle(-thickness/2, h/2, thickness, h * 2, opt),    // лево
+        Bodies.rectangle(w + thickness/2, h/2, thickness, h * 2, opt)  // право
     ];
     Composite.add(world, walls);
 }
 createWalls();
 
-const BASE_SIZE = 80;
+// Константы размера
+const BERRY_DIAMETER = 60; 
 let isSpaceMode = false, gyroStarted = false, sparksEnabled = true;
 const textureCache = {};
 
@@ -149,57 +150,66 @@ function getCircularTexture(berryNum, callback) {
         textureCache[berryNum] = canvas.toDataURL();
         callback(textureCache[berryNum]);
     };
-    img.onerror = () => { /* fallback */ callback(null); };
+    img.onerror = () => { callback(null); };
 }
 
 function createBerry(x, y) {
     const berryNum = Math.floor(Math.random() * 4) + 1;
-    // Корректировка размера под масштаб экрана
-    const currentSize = BASE_SIZE * (window.innerWidth / 400 > 1 ? 1 : window.innerWidth / 400);
     
+    // Адаптивный размер: не больше 80px и не больше 1/5 ширины экрана
+    const scaleFactor = Math.min(window.innerWidth / 400, 1);
+    const finalSize = BERRY_DIAMETER * scaleFactor;
+
     getCircularTexture(berryNum, (circularImg) => {
-        const berry = Bodies.circle(x, y, currentSize/2, {
-            restitution: 0.7, 
-            friction: 0.2, 
-            frictionAir: isSpaceMode ? 0.08 : 0.01,
+        const berry = Bodies.circle(x, y, finalSize / 2, {
+            restitution: 0.6, 
+            friction: 0.3, 
+            frictionAir: isSpaceMode ? 0.04 : 0.01,
             render: { 
                 sprite: { 
                     texture: circularImg, 
-                    xScale: currentSize/256, 
-                    yScale: currentSize/256 
+                    // Текстура 256px, поэтому делим нужный диаметр на 256
+                    xScale: finalSize / 256, 
+                    yScale: finalSize / 256 
                 } 
             }
         });
-        if(isSpaceMode) Body.setVelocity(berry, { x: (Math.random()-0.5)*3, y: (Math.random()-0.5)*3 });
+        if(isSpaceMode) Body.setVelocity(berry, { x: (Math.random()-0.5)*5, y: (Math.random()-0.5)*5 });
         Composite.add(world, berry);
     });
 }
 
 function spawnMultiple() {
     const count = parseInt(document.getElementById('countInput').value) || 5;
-    for(let i=0; i<count; i++) createBerry(Math.random()*window.innerWidth, 50);
+    for(let i=0; i<count; i++) {
+        createBerry(Math.random() * (window.innerWidth - 40) + 20, -50 - (i * 20));
+    }
 }
 
 function clearAll() { 
-    Composite.allBodies(world).forEach(b => { if(!b.isStatic) Composite.remove(world, b); }); 
+    const bodies = Composite.allBodies(world);
+    bodies.forEach(b => { if(!b.isStatic) Composite.remove(world, b); }); 
 }
 
 function toggleSpace() {
     isSpaceMode = !isSpaceMode;
     document.getElementById('spaceBtn').classList.toggle('active-mode');
     world.gravity.y = isSpaceMode ? 0 : 1;
+    world.gravity.x = 0;
+    
     Composite.allBodies(world).forEach(b => {
         if(!b.isStatic) {
-            b.frictionAir = isSpaceMode ? 0.08 : 0.01;
-            if(isSpaceMode) Body.setVelocity(b, { x: (Math.random()-0.5)*2, y: (Math.random()-0.5)*2 });
+            b.frictionAir = isSpaceMode ? 0.04 : 0.01;
+            if(isSpaceMode) {
+                Body.setVelocity(b, { x: (Math.random()-0.5)*4, y: (Math.random()-0.5)*4 });
+            }
         }
     });
 }
 
-// Управление мышью/тачем
 const mouseConstraint = MouseConstraint.create(engine, {
     mouse: Mouse.create(render.canvas), 
-    constraint: { stiffness: 0.1, render: { visible: false } }
+    constraint: { stiffness: 0.2, render: { visible: false } }
 });
 Composite.add(world, mouseConstraint);
 
@@ -212,8 +222,12 @@ Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach(pair => {
         const pos = pair.collision.supports[0];
         if (pos) {
-            for(let i=0; i<2; i++) {
-                particles.push({ x: pos.x, y: pos.y, vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3, life: 1 });
+            for(let i=0; i<3; i++) {
+                particles.push({ 
+                    x: pos.x, y: pos.y, 
+                    vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, 
+                    life: 1 
+                });
             }
         }
     });
@@ -228,7 +242,7 @@ Events.on(engine, 'afterUpdate', () => {
     }
     const ctx = render.context;
     particles = particles.filter(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+        p.x += p.vx; p.y += p.vy; p.life -= 0.04;
         ctx.fillStyle = `rgba(157, 78, 221, ${p.life})`;
         ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
         return p.life > 0;
@@ -250,8 +264,8 @@ function initGyro() {
 function handleGyro(e) {
     const s = 0.06;
     if (isSpaceMode) {
-        const fx = e.gamma * 0.00005;
-        const fy = e.beta * 0.00005;
+        const fx = e.gamma * 0.00002;
+        const fy = e.beta * 0.00002;
         Composite.allBodies(world).forEach(b => {
             if(!b.isStatic) Body.applyForce(b, b.position, { x: fx, y: fy });
         });
@@ -266,6 +280,8 @@ window.addEventListener('resize', () => {
     render.canvas.height = window.innerHeight;
     render.options.width = window.innerWidth;
     render.options.height = window.innerHeight;
+    render.bounds.max.x = window.innerWidth;
+    render.bounds.max.y = window.innerHeight;
     createWalls();
 });
 
