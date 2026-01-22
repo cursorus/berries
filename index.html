@@ -3,60 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Berry Ultimate</title>
+    <title>Berry Pro Max</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; touch-action: none; }
         
         #ui { 
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 100; display: flex; gap: 12px; align-items: center;
-            background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px);
-            padding: 10px 20px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.1);
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
+            z-index: 100; display: flex; gap: 15px; align-items: center;
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
+            padding: 12px 25px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.2);
         }
 
         .btn {
-            width: 44px; height: 44px; border-radius: 50%; border: none;
+            width: 45px; height: 45px; border-radius: 50%; border: none;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; background: rgba(255,255,255,0.1); color: #fff; transition: 0.2s;
         }
 
-        .btn svg { width: 22px; height: 22px; fill: currentColor; }
-        .btn:active { transform: scale(0.85); }
+        .btn svg { width: 24px; height: 24px; fill: currentColor; }
+        .btn:active { transform: scale(0.8); }
         .active-mode { background: #9d4edd !important; box-shadow: 0 0 15px #9d4edd; }
         
-        .controls { display: flex; flex-direction: column; align-items: center; gap: 2px; color: white; font-size: 10px; }
-        input[type="range"] { width: 60px; accent-color: #9d4edd; cursor: pointer; }
-        #countInput { width: 30px; background: none; border: none; color: white; text-align: center; font-size: 16px; font-weight: bold; }
+        .input-group { display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.5); font-size: 9px; font-weight: bold; }
+        input { width: 35px; background: none; border: none; color: white; text-align: center; font-size: 16px; font-weight: bold; outline: none; }
     </style>
 </head>
-<body>
+<body onclick="initGyro()">
 
 <div id="ui">
-    <div class="controls">
+    <div class="input-group">
         <input type="number" id="countInput" value="5">
-        <span>КОЛ-ВО</span>
+        <span>ЯГОД</span>
     </div>
 
-    <button class="btn" onclick="spawnMultiple()" title="Добавить">
+    <button class="btn" onclick="spawnMultiple()">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
     </button>
 
-    <div class="controls">
-        <input type="range" id="speedRange" min="0.1" max="3" step="0.1" value="1">
-        <span>СКОРОСТЬ</span>
+    <div class="input-group">
+        <input type="number" id="speedInput" value="1">
+        <span>СКОР</span>
     </div>
 
-    <button class="btn" onclick="clearAll()" title="Очистить">
-        <svg viewBox="0 0 24 24"><path d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"/></svg>
+    <button class="btn" onclick="clearAll()">
+        <svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
     </button>
 
-    <button id="sparkBtn" class="btn active-mode" onclick="toggleSparks()" title="Искры">
-        <svg viewBox="0 0 24 24"><path d="M11.5,2L15.5,10L23.5,14L15.5,18L11.5,26L7.5,18L-0.5,14L7.5,10L11.5,2M11.5,7.83L9.91,11L6.73,12.58L9.91,14.17L11.5,17.35L13.09,14.17L16.27,12.58L13.09,11L11.5,7.83Z"/></svg>
+    <button id="sparkBtn" class="btn active-mode" onclick="sparksEnabled = !sparksEnabled; this.classList.toggle('active-mode')">
+        <svg viewBox="0 0 24 24"><path d="M10,2L12,9L19,11L12,13L10,20L8,13L1,11L8,9L10,2Z"/></svg>
     </button>
 
-    <button id="spaceBtn" class="btn" onclick="toggleSpace()" title="Космос">
-        <svg viewBox="0 0 24 24"><path d="M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5Z"/></svg>
+    <button id="spaceBtn" class="btn" onclick="toggleSpace()">
+        <svg viewBox="0 0 24 24"><path d="M12,2.5L8,7H11V14H13V7H16L12,2.5M7,15V17H17V15H7Z"/></svg>
     </button>
 </div>
 
@@ -88,9 +87,8 @@ function createWalls() {
 createWalls();
 
 const TARGET_SIZE = 80;
-let isSpaceMode = false, gyroRequested = false, sparksEnabled = true;
+let isSpaceMode = false, gyroStarted = false, sparksEnabled = true;
 
-// Функция для обрезки картинки в круг
 function getCircularTexture(imgPath, size, callback) {
     const img = new Image();
     img.src = imgPath;
@@ -98,9 +96,7 @@ function getCircularTexture(imgPath, size, callback) {
         const canvas = document.createElement('canvas');
         canvas.width = size; canvas.height = size;
         const ctx = canvas.getContext('2d');
-        ctx.beginPath();
-        ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
-        ctx.clip();
+        ctx.beginPath(); ctx.arc(size/2, size/2, size/2, 0, Math.PI*2); ctx.clip();
         ctx.drawImage(img, 0, 0, size, size);
         callback(canvas.toDataURL());
     };
@@ -110,90 +106,106 @@ function createBerry(x, y) {
     const berryNum = Math.floor(Math.random() * 5) + 1;
     getCircularTexture(`berry${berryNum}.png`, 256, (circularImg) => {
         const berry = Bodies.circle(x, y, TARGET_SIZE/2, {
-            restitution: 0.8, friction: 0.2,
+            restitution: 0.8, friction: 0.1,
             render: { sprite: { texture: circularImg, xScale: TARGET_SIZE/256, yScale: TARGET_SIZE/256 } }
         });
         Composite.add(world, berry);
     });
 }
 
-// Система искр (простой массив частиц)
-let particles = [];
-function createSpark(x, y) {
-    if (!sparksEnabled) return;
-    for (let i = 0; i < 3; i++) {
-        particles.push({
-            x, y, 
-            vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
-            life: 1.0, size: Math.random()*4 + 2
-        });
-    }
-}
-
 function spawnMultiple() {
-    if(!gyroRequested) requestGyro();
-    const count = parseInt(document.getElementById('countInput').value);
+    const count = parseInt(document.getElementById('countInput').value) || 5;
     for(let i=0; i<count; i++) createBerry(Math.random()*window.innerWidth, 50);
 }
 
-function clearAll() { Composite.allBodies(world).forEach(b => { if(!b.isStatic) Composite.remove(world, b); }); }
-function toggleSpace() { isSpaceMode = !isSpaceMode; document.getElementById('spaceBtn').classList.toggle('active-mode'); }
-function toggleSparks() { sparksEnabled = !sparksEnabled; document.getElementById('sparkBtn').classList.toggle('active-mode'); }
+function clearAll() { 
+    Composite.allBodies(world).forEach(b => { if(!b.isStatic) Composite.remove(world, b); }); 
+}
 
+function toggleSpace() {
+    isSpaceMode = !isSpaceMode;
+    document.getElementById('spaceBtn').classList.toggle('active-mode');
+    world.gravity.y = isSpaceMode ? 0 : 1;
+}
+
+// Управление
 const mouseConstraint = MouseConstraint.create(engine, {
     mouse: Mouse.create(render.canvas), constraint: { stiffness: 0.1, render: { visible: false } }
 });
 Composite.add(world, mouseConstraint);
 
-// Коллизии для искр
+// Искры
+let particles = [];
 Events.on(engine, 'collisionStart', (event) => {
+    if (!sparksEnabled) return;
     event.pairs.forEach(pair => {
         const pos = pair.collision.supports[0];
-        if (pos) createSpark(pos.x, pos.y);
+        if (pos) {
+            for(let i=0; i<4; i++) {
+                particles.push({ x: pos.x, y: pos.y, vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8, life: 1, size: Math.random()*3+1 });
+            }
+        }
     });
 });
 
 Events.on(engine, 'afterUpdate', () => {
-    const speedMultiplier = document.getElementById('speedRange').value;
+    const speed = parseFloat(document.getElementById('speedInput').value) || 1;
+    const bodies = Composite.allBodies(world);
     
-    // Применяем скорость и кручение
-    Composite.allBodies(world).forEach(b => {
+    bodies.forEach(b => {
         if (!b.isStatic) {
-            Body.setVelocity(b, { x: b.velocity.x * speedMultiplier, y: b.velocity.y * speedMultiplier });
+            // Усилитель скорости
+            if (speed !== 1) {
+                Body.setVelocity(b, { x: b.velocity.x * speed, y: b.velocity.y * speed });
+            }
+            // Вращение при перетаскивании
             if (mouseConstraint.draggedBody === b) {
                 Body.setAngularVelocity(b, b.angularVelocity + (Math.random()-0.5)*0.3);
             }
         }
     });
-    
-    // Отрисовка искр на канвасе рендера
+
+    // Рисуем искры
     const ctx = render.context;
     particles = particles.filter(p => {
-        p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+        p.x += p.vx; p.y += p.vy; p.life -= 0.03;
         ctx.fillStyle = `rgba(157, 78, 221, ${p.life})`;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
         return p.life > 0;
     });
 });
 
-function requestGyro() {
+// Авто-гироскоп при первом клике
+function initGyro() {
+    if (gyroStarted) return;
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission().then(res => { if (res === 'granted') window.addEventListener('deviceorientation', handleGyro); });
-    } else { window.addEventListener('deviceorientation', handleGyro); }
-    gyroRequested = true;
+        DeviceOrientationEvent.requestPermission().then(res => {
+            if (res === 'granted') window.addEventListener('deviceorientation', handleGyro);
+        });
+    } else {
+        window.addEventListener('deviceorientation', handleGyro);
+    }
+    gyroStarted = true;
 }
 
 function handleGyro(e) {
-    const s = 0.08;
-    if (!isSpaceMode) { world.gravity.x = e.gamma * s; world.gravity.y = e.beta * s; }
-    else {
+    const s = 0.07;
+    if (!isSpaceMode) {
+        world.gravity.x = e.gamma * s;
+        world.gravity.y = e.beta * s;
+    } else {
         Composite.allBodies(world).forEach(b => {
-            if(!b.isStatic) Body.applyForce(b, b.position, { x: e.gamma * 0.0005, y: e.beta * 0.0005 });
+            if(!b.isStatic) Body.applyForce(b, b.position, { x: e.gamma * 0.0006, y: e.beta * 0.0006 });
         });
     }
 }
 
-window.addEventListener('resize', () => { render.canvas.width = window.innerWidth; render.canvas.height = window.innerHeight; createWalls(); });
+window.addEventListener('resize', () => {
+    render.canvas.width = window.innerWidth;
+    render.canvas.height = window.innerHeight;
+    createWalls();
+});
+
 spawnMultiple();
 </script>
 </body>
