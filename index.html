@@ -11,16 +11,17 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <style>
-        /* Растягиваем на весь экран, учитывая системные отступы */
+        /* Фикс полноэкранного режима и отсутствия полос */
         html, body { 
             margin: 0; 
-            padding: 0;
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
             overflow: hidden; 
             background: #000; 
             font-family: sans-serif; 
             touch-action: none;
-            height: 100%;
-            width: 100%;
+            position: fixed; /* Предотвращает скролл на iOS */
         }
         
         #logo {
@@ -33,40 +34,35 @@
 
         #ui { 
             position: fixed; 
-            /* Используем env(safe-area-inset-bottom) чтобы подняться над полоской iPhone */
-            bottom: calc(25px + env(safe-area-inset-bottom)); 
+            /* Фикс для WebClip: учитываем безопасную зону снизу */
+            bottom: calc(20px + env(safe-area-inset-bottom)); 
             left: 50%; 
             transform: translateX(-50%);
-            z-index: 100; 
-            display: flex; 
-            gap: 15px; 
-            align-items: center;
-            background: rgba(255, 255, 255, 0.1); 
-            backdrop-filter: blur(20px);
-            padding: 12px 25px; 
-            border-radius: 35px; 
-            border: 1px solid rgba(255,255,255,0.2);
-            max-width: 90vw; 
-            width: fit-content;
+            z-index: 100; display: flex; gap: 10px; align-items: center;
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px);
+            padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);
+            max-width: 90vw; width: fit-content;
         }
 
-        .ui-item { display: flex; flex-direction: column; align-items: center; min-width: 50px; }
+        .ui-item { display: flex; flex-direction: column; align-items: center; min-width: 45px; }
         
         .btn {
-            width: 44px; height: 44px; border-radius: 50%; border: none;
+            width: 40px; height: 40px; border-radius: 50%; border: none;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; background: #fff; color: #000; transition: 0.2s;
+            cursor: pointer; background: rgba(255,255,255,1); color: #000; transition: 0.2s;
             margin-bottom: 4px;
+            -webkit-user-select: none; /* Убирает выделение при долгом нажатии */
+            user-select: none;
         }
-        .btn svg { width: 22px; height: 22px; fill: currentColor; }
-        .btn:active { transform: scale(0.85); }
+        .btn svg { width: 20px; height: 20px; fill: currentColor; }
+        .btn:active { transform: scale(0.8); }
         .active-mode { background: #9d4edd !important; color: #fff !important; box-shadow: 0 0 15px #9d4edd; }
         
-        .label { font-size: 8px; font-weight: bold; color: rgba(255,255,255,0.6); text-transform: uppercase; text-align: center; }
-        .val { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 4px; height: 44px; display: flex; align-items: center; }
+        .label { font-size: 8px; font-weight: bold; color: rgba(255,255,255,0.5); text-transform: uppercase; text-align: center; }
+        .val { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 4px; height: 40px; display: flex; align-items: center; }
 
-        input { width: 40px; background: none; border: none; color: white; text-align: center; font-size: 18px; font-weight: bold; outline: none; }
-        canvas { display: block; width: 100% !important; height: 100% !important; }
+        input { width: 35px; background: none; border: none; color: white; text-align: center; font-size: 14px; font-weight: bold; outline: none; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body onclick="initGyro()">
@@ -80,12 +76,12 @@
     </div>
 
     <div class="ui-item">
-        <div class="val"><input type="number" id="countInput" value="5" pattern="\d*"></div>
+        <div class="val"><input type="number" id="countInput" value="5"></div>
         <div class="label">ЯГОДКИ</div>
     </div>
 
     <div class="ui-item">
-        <button class="btn" onclick="spawnMultiple()">
+        <button class="btn" id="addBtn">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </button>
         <div class="label">ДОБАВИТЬ</div>
@@ -136,12 +132,11 @@ function createWalls() {
     const thickness = 100;
     const opt = { isStatic: true, friction: 0.5, render: { visible: false } };
     
-    // Стены выходят за границы, чтобы не было щелей
     walls = [
-        Bodies.rectangle(w/2, h + thickness/2, w * 5, thickness, opt), // пол
-        Bodies.rectangle(w/2, -thickness/2, w * 5, thickness, opt),    // потолок
-        Bodies.rectangle(-thickness/2, h/2, thickness, h * 5, opt),    // лево
-        Bodies.rectangle(w + thickness/2, h/2, thickness, h * 5, opt)  // право
+        Bodies.rectangle(w/2, h + thickness/2, w * 2, thickness, opt), // пол
+        Bodies.rectangle(w/2, -thickness/2, w * 2, thickness, opt),    // потолок
+        Bodies.rectangle(-thickness/2, h/2, thickness, h * 2, opt),    // лево
+        Bodies.rectangle(w + thickness/2, h/2, thickness, h * 2, opt)  // право
     ];
     Composite.add(world, walls);
 }
@@ -164,6 +159,7 @@ function getCircularTexture(berryNum, callback) {
         textureCache[berryNum] = canvas.toDataURL();
         callback(textureCache[berryNum]);
     };
+    img.onerror = () => { callback(null); };
 }
 
 function createBerry(x, y) {
@@ -189,18 +185,33 @@ function createBerry(x, y) {
     });
 }
 
-// ИСПРАВЛЕНО: Теперь добавляет ровно столько, сколько введено в инпут
 function spawnMultiple() {
-    const input = document.getElementById('countInput');
-    const count = parseInt(input.value) || 1; 
-    
-    for(let i = 0; i < count; i++) {
-        // Разбрасываем ягоды по горизонтали, чтобы не слипались в одной точке
-        const randomX = Math.random() * (window.innerWidth - 60) + 30;
-        const randomY = -50 - (i * 40); // Смещение по вертикали, чтобы падали очередью
-        createBerry(randomX, randomY);
+    const count = parseInt(document.getElementById('countInput').value) || 1;
+    for(let i=0; i<count; i++) {
+        createBerry(Math.random() * (window.innerWidth - 40) + 20, -50 - (i * 20));
     }
 }
+
+// ЛОГИКА ЗАЖИМА КНОПКИ
+let spawnTimer;
+const addBtn = document.getElementById('addBtn');
+
+const startSpawning = (e) => {
+    if(e) e.preventDefault();
+    spawnMultiple(); // Добавляем сразу при нажатии
+    clearInterval(spawnTimer);
+    spawnTimer = setInterval(spawnMultiple, 150); // Затем быстро добавляем каждые 150мс
+};
+
+const stopSpawning = () => {
+    clearInterval(spawnTimer);
+};
+
+addBtn.addEventListener('mousedown', startSpawning);
+addBtn.addEventListener('touchstart', startSpawning, {passive: false});
+window.addEventListener('mouseup', stopSpawning);
+window.addEventListener('touchend', stopSpawning);
+window.addEventListener('touchcancel', stopSpawning);
 
 function clearAll() { 
     const bodies = Composite.allBodies(world);
@@ -233,7 +244,7 @@ let lastTime = performance.now(), frames = 0;
 const fpsEl = document.getElementById('fpsVal');
 let particles = [];
 
-// Искры теперь ВСЕГДА включены (убрана проверка условия)
+// Искры всегда включены
 Events.on(engine, 'collisionStart', (event) => {
     event.pairs.forEach(pair => {
         const pos = pair.collision.supports[0];
@@ -292,16 +303,15 @@ function handleGyro(e) {
 }
 
 window.addEventListener('resize', () => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    render.canvas.width = w;
-    render.canvas.height = h;
-    render.options.width = w;
-    render.options.height = h;
+    render.canvas.width = window.innerWidth;
+    render.canvas.height = window.innerHeight;
+    render.options.width = window.innerWidth;
+    render.options.height = window.innerHeight;
+    render.bounds.max.x = window.innerWidth;
+    render.bounds.max.y = window.innerHeight;
     createWalls();
 });
 
-// Первый запуск
 spawnMultiple();
 </script>
 </body>
